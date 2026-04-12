@@ -2,19 +2,26 @@
 
 import { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
-import { TEAM_MEMBERS } from "@/data/team";
 
 export default function TeamRoster() {
+  const [teamMembers, setTeamMembers] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const containerRef = useRef(null);
   const cardsRef = useRef({});
   const overlayRef = useRef(null);
   const detailRef = useRef(null);
 
-  const selected = TEAM_MEMBERS.find((m) => m.id === selectedId);
+  const selected = teamMembers.find((m) => m.id === selectedId);
 
-  // Animate orbit float with CSS
   useEffect(() => {
+    fetch("/api/team")
+      .then((r) => r.json())
+      .then((data) => { if (Array.isArray(data)) setTeamMembers(data); })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (teamMembers.length === 0) return;
     const cards = Object.values(cardsRef.current).filter(Boolean);
     cards.forEach((card, i) => {
       gsap.to(card, {
@@ -28,7 +35,7 @@ export default function TeamRoster() {
         delay: i * 0.3,
       });
     });
-  }, []);
+  }, [teamMembers]);
 
   const handleSelect = (member) => {
     setSelectedId(member.id);
@@ -82,12 +89,12 @@ export default function TeamRoster() {
     <div ref={containerRef} className="relative min-h-screen">
       {/* Floating cards in orbit */}
       <div className="relative w-full h-[80vh] md:h-[85vh]">
-        {TEAM_MEMBERS.map((member, index) => (
+        {teamMembers.map((member, index) => (
           <div
             key={member.id}
             ref={(el) => (cardsRef.current[member.id] = el)}
             className="absolute cursor-pointer group"
-            style={getOrbitStyle(index, TEAM_MEMBERS.length)}
+            style={getOrbitStyle(index, teamMembers.length)}
             onClick={() => handleSelect(member)}
           >
             <div className="glass-card p-5 md:p-6 w-[180px] md:w-[220px] transition-all duration-500 group-hover:shadow-[0_0_40px_rgba(168,85,247,0.25)] group-hover:scale-105 group-hover:border-purple-light/40">

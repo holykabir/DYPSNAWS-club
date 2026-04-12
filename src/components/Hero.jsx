@@ -68,7 +68,7 @@ export default function Hero() {
             className="inline-block px-4 py-2 text-xs md:text-sm tracking-[0.3em] text-purple-light/80 border border-purple-light/20 rounded-full backdrop-blur-sm"
             style={{ fontFamily: "var(--font-display)" }}
           >
-            ✦ WELCOME TO THE FUTURE OF CLOUD ✦
+            ✦ WELCOME TO D.Y PATIL SALONKHENAGAR'S ✦
           </span>
         </div>
 
@@ -79,7 +79,7 @@ export default function Hero() {
         >
           <span className="block text-off-white">AWS</span>
           <span className="block text-gradient">CLOUD</span>
-          <span className="block text-off-white">CLUB</span>
+          <span className="block text-off-white">CLUBS</span>
         </h1>
 
         <p className="text-base md:text-lg text-off-white/50 max-w-xl mx-auto mb-10 leading-relaxed">

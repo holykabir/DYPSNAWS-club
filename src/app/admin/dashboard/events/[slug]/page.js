@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import AdminLayout from "@/components/admin/AdminLayout";
+import FormFieldsEditor from "@/components/admin/FormFieldsEditor";
 
 const inputStyle = {
   width: "100%",
@@ -57,6 +58,9 @@ export default function EditEventPage() {
             prerequisites: data.prerequisites?.length ? data.prerequisites : [""],
             schedule: data.schedule?.length ? data.schedule : [{ time: "", topic: "" }],
             speakers: data.speakers?.length ? data.speakers : [{ name: "", role: "", topic: "" }],
+            formFields: data.formFields?.length ? data.formFields : [],
+            featured: data.featured !== false,
+            status: data.status || "Upcoming",
           });
           setImages(data.images || []);
           setVideos(data.videos || []);
@@ -98,6 +102,7 @@ export default function EditEventPage() {
       prerequisites: form.prerequisites.filter((p) => p.trim()),
       schedule: form.schedule.filter((s) => s.time.trim() || s.topic.trim()),
       speakers: form.speakers.filter((s) => s.name.trim()),
+      formFields: form.formFields.filter((f) => f.label.trim()),
       images,
       videos,
     };
@@ -169,8 +174,30 @@ export default function EditEventPage() {
               </select>
             </div>
             <div>
+              <label style={labelStyle}>STATUS</label>
+              <select style={{ ...inputStyle, cursor: "pointer" }} value={form.status} onChange={(e) => update("status", e.target.value)}>
+                {["Upcoming", "Ongoing", "Completed"].map((s) => (<option key={s} value={s} style={{ background: "#1a1a2e" }}>{s}</option>))}
+              </select>
+            </div>
+            <div>
               <label style={labelStyle}>CAPACITY</label>
               <input style={inputStyle} type="number" value={form.capacity} onChange={(e) => update("capacity", e.target.value)} min="1" required />
+            </div>
+            <div style={{ display: "flex", alignItems: "center", paddingTop: "20px" }}>
+              <label style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer" }}>
+                <div
+                  onClick={() => update("featured", !form.featured)}
+                  style={{
+                    width: "40px", height: "22px", borderRadius: "11px", position: "relative", cursor: "pointer",
+                    background: form.featured ? "linear-gradient(135deg, #6B21A8, #A855F7)" : "rgba(255,255,255,0.08)",
+                    border: `1px solid ${form.featured ? "rgba(168,85,247,0.5)" : "rgba(255,255,255,0.1)"}`,
+                    transition: "all 0.3s",
+                  }}
+                >
+                  <div style={{ width: "16px", height: "16px", borderRadius: "50%", background: "#fff", position: "absolute", top: "2px", left: form.featured ? "20px" : "2px", transition: "left 0.3s" }} />
+                </div>
+                <span style={{ fontSize: "11px", color: form.featured ? "#A855F7" : "rgba(245,245,245,0.3)", fontFamily: "var(--font-display)", letterSpacing: "0.1em" }}>SHOW ON HOMEPAGE</span>
+              </label>
             </div>
             <div style={{ gridColumn: "1 / -1" }}>
               <label style={labelStyle}>DESCRIPTION</label>
@@ -225,6 +252,9 @@ export default function EditEventPage() {
           ))}
           <button type="button" onClick={() => update("prerequisites", [...form.prerequisites, ""])} style={{ color: "#A855F7", background: "none", border: "none", cursor: "pointer", fontSize: "12px", marginTop: "4px" }}>+ Add prerequisite</button>
         </div>
+
+        {/* Registration Form Fields */}
+        <FormFieldsEditor fields={form.formFields} onChange={(f) => update("formFields", f)} />
 
         {/* Media */}
         <div style={{ background: "rgba(107,33,168,0.06)", border: "1px solid rgba(168,85,247,0.12)", borderRadius: "16px", padding: "28px", marginBottom: "20px" }}>

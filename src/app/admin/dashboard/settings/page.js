@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 import AdminLayout from "@/components/admin/AdminLayout";
 
 const inputStyle = { width: "100%", padding: "10px 14px", borderRadius: "10px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(168,85,247,0.15)", color: "#F5F5F5", fontSize: "13px", outline: "none" };
 const labelStyle = { display: "block", fontSize: "10px", fontFamily: "var(--font-display)", letterSpacing: "0.15em", color: "rgba(168,85,247,0.5)", marginBottom: "8px" };
 
 export default function SettingsPage() {
-  const [currentPassword, setCurrentPassword] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -23,34 +23,33 @@ export default function SettingsPage() {
       return;
     }
 
-    if (!currentPassword) {
-      setMessage({ type: "error", text: "Current password is required" });
+    if (!newEmail && !newPassword) {
+      setMessage({ type: "error", text: "Please enter a new email or password" });
       return;
     }
 
     setSaving(true);
 
     try {
-      const payload = { currentPassword };
-      if (newEmail) payload.newEmail = newEmail;
-      if (newPassword) payload.newPassword = newPassword;
+      const supabase = createClient();
+      const updates = {};
+      if (newEmail) updates.email = newEmail;
+      if (newPassword) updates.password = newPassword;
 
-      const res = await fetch("/api/auth/credentials", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      const { error } = await supabase.auth.updateUser(updates);
 
-      const data = await res.json();
-
-      if (res.ok) {
-        setMessage({ type: "success", text: "Credentials updated successfully! Please re-login with your new credentials." });
-        setCurrentPassword("");
+      if (error) {
+        setMessage({ type: "error", text: error.message });
+      } else {
+        setMessage({
+          type: "success",
+          text: newEmail
+            ? "Check your new email inbox for a confirmation link."
+            : "Password updated successfully!",
+        });
         setNewEmail("");
         setNewPassword("");
         setConfirmPassword("");
-      } else {
-        setMessage({ type: "error", text: data.error || "Failed to update" });
       }
     } catch {
       setMessage({ type: "error", text: "Network error" });
@@ -60,7 +59,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <AdminLayout title="SETTINGS" subtitle="Change admin credentials">
+    <AdminLayout title="SETTINGS" subtitle="Manage your admin account">
       <form onSubmit={handleSubmit} style={{ maxWidth: "500px" }}>
         {message.text && (
           <div
@@ -77,23 +76,6 @@ export default function SettingsPage() {
             {message.text}
           </div>
         )}
-
-        <div style={{ background: "rgba(107,33,168,0.06)", border: "1px solid rgba(168,85,247,0.12)", borderRadius: "16px", padding: "28px", marginBottom: "20px" }}>
-          <h3 style={{ fontSize: "12px", fontFamily: "var(--font-display)", letterSpacing: "0.15em", color: "rgba(245,245,245,0.4)", marginBottom: "20px" }}>
-            CURRENT PASSWORD
-          </h3>
-          <div>
-            <label style={labelStyle}>ENTER CURRENT PASSWORD TO CONFIRM</label>
-            <input
-              style={inputStyle}
-              type="password"
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-              placeholder="Current password"
-              required
-            />
-          </div>
-        </div>
 
         <div style={{ background: "rgba(107,33,168,0.06)", border: "1px solid rgba(168,85,247,0.12)", borderRadius: "16px", padding: "28px", marginBottom: "20px" }}>
           <h3 style={{ fontSize: "12px", fontFamily: "var(--font-display)", letterSpacing: "0.15em", color: "rgba(245,245,245,0.4)", marginBottom: "20px" }}>
@@ -117,13 +99,14 @@ export default function SettingsPage() {
           </h3>
           <div style={{ display: "grid", gap: "16px" }}>
             <div>
-              <label style={labelStyle}>NEW PASSWORD (leave blank to keep current)</label>
+              <label style={labelStyle}>NEW PASSWORD</label>
               <input
                 style={inputStyle}
                 type="password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 placeholder="New password"
+                minLength={6}
               />
             </div>
             <div>
@@ -159,6 +142,10 @@ export default function SettingsPage() {
         >
           {saving ? "UPDATING..." : "UPDATE CREDENTIALS"}
         </button>
+
+        <p style={{ fontSize: "11px", color: "rgba(245,245,245,0.25)", marginTop: "16px", textAlign: "center" }}>
+          Authentication managed by Supabase. No current password required.
+        </p>
       </form>
     </AdminLayout>
   );

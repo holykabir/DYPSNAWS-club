@@ -114,7 +114,12 @@ export default function EventsListPage() {
             onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
           >
             <div>
-              <div style={{ fontSize: "14px", fontWeight: 500, color: "#F5F5F5" }}>{event.title}</div>
+              <div style={{ fontSize: "14px", fontWeight: 500, color: "#F5F5F5", display: "flex", alignItems: "center", gap: "6px" }}>
+                {event.title}
+                {event.featured !== false && (
+                  <span style={{ fontSize: "9px", padding: "2px 6px", borderRadius: "4px", background: "rgba(168,85,247,0.15)", color: "#A855F7", fontFamily: "var(--font-display)", letterSpacing: "0.1em" }}>★ HOME</span>
+                )}
+              </div>
               <div style={{ fontSize: "11px", color: "rgba(245,245,245,0.3)", marginTop: "2px" }}>{event.location}</div>
             </div>
             <span
@@ -158,6 +163,29 @@ export default function EventsListPage() {
                 }}
               >
                 Edit
+              </button>
+              <button
+                onClick={() => router.push(`/admin/dashboard/events/${event.slug}/registrations`)}
+                style={{
+                  padding: "6px 12px",
+                  borderRadius: "8px",
+                  border: "1px solid rgba(72,187,120,0.2)",
+                  background: "transparent",
+                  color: "rgba(72,187,120,0.7)",
+                  fontSize: "11px",
+                  cursor: "pointer",
+                  transition: "all 0.2s",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = "rgba(72,187,120,0.1)";
+                  e.currentTarget.style.borderColor = "rgba(72,187,120,0.4)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "transparent";
+                  e.currentTarget.style.borderColor = "rgba(72,187,120,0.2)";
+                }}
+              >
+                Regs
               </button>
               <button
                 onClick={() => handleDelete(event.slug)}

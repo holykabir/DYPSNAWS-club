@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { createClient } from "@/lib/supabase/client";
 
 export default function AdminPageClient() {
   const [email, setEmail] = useState("");
@@ -12,16 +13,37 @@ export default function AdminPageClient() {
   const [loading, setLoading] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   // Check if already logged in
   useEffect(() => {
-    fetch("/api/auth/me")
-      .then((r) => {
-        if (r.ok) router.replace("/admin/dashboard");
-        else setCheckingAuth(false);
-      })
-      .catch(() => setCheckingAuth(false));
-  }, [router]);
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        // Verify admin via API
+        fetch("/api/auth/me")
+          .then((r) => r.json())
+          .then((data) => {
+            if (data.isAdmin) {
+              router.replace("/admin/dashboard");
+            } else {
+              setCheckingAuth(false);
+            }
+          })
+          .catch(() => setCheckingAuth(false));
+      } else {
+        setCheckingAuth(false);
+      }
+    });
+
+    // Check for error in URL params
+    const urlError = searchParams.get("error");
+    if (urlError === "unauthorized") {
+      setError("This account is not authorized for admin access");
+    } else if (urlError === "auth_failed") {
+      setError("Authentication failed. Please try again.");
+    }
+  }, [router, searchParams]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -29,21 +51,31 @@ export default function AdminPageClient() {
     setLoading(true);
 
     try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+      const supabase = createClient();
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       });
 
-      if (res.ok) {
+      if (signInError) {
+        setError(signInError.message);
+        setLoading(false);
+        return;
+      }
+
+      // Verify admin status via API
+      const res = await fetch("/api/auth/me");
+      const meData = await res.json();
+
+      if (meData.isAdmin) {
         router.push("/admin/dashboard");
       } else {
-        const data = await res.json();
-        setError(data.error || "Invalid credentials");
+        await supabase.auth.signOut();
+        setError("This account is not authorized for admin access");
+        setLoading(false);
       }
     } catch {
       setError("Network error. Please try again.");
-    } finally {
       setLoading(false);
     }
   };
@@ -187,7 +219,7 @@ export default function AdminPageClient() {
 
           {/* Bottom text */}
           <p className="text-center text-[10px] text-off-white/20 mt-6">
-            Protected by AWS Cloud Club Security
+            Powered by Supabase Authentication
           </p>
         </div>
       </div>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 
 export default function AdminGuard({ children }) {
   const [loading, setLoading] = useState(true);
@@ -9,16 +10,27 @@ export default function AdminGuard({ children }) {
   const router = useRouter();
 
   useEffect(() => {
-    fetch("/api/auth/me")
-      .then((r) => {
-        if (r.ok) {
-          setAuthed(true);
-        } else {
-          router.replace("/admin");
-        }
-      })
-      .catch(() => router.replace("/admin"))
-      .finally(() => setLoading(false));
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data: { user }, error }) => {
+      if (error || !user) {
+        router.replace("/admin");
+        return;
+      }
+      // Check admin email
+      const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL || "admin@awsclub.dyp";
+      // We don't expose admin email on client — just check via API
+      fetch("/api/auth/me")
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.isAdmin) {
+            setAuthed(true);
+          } else {
+            router.replace("/admin");
+          }
+        })
+        .catch(() => router.replace("/admin"))
+        .finally(() => setLoading(false));
+    });
   }, [router]);
 
   if (loading) {

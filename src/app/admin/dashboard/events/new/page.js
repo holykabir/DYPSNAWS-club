@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import AdminLayout from "@/components/admin/AdminLayout";
+import FormFieldsEditor from "@/components/admin/FormFieldsEditor";
 
 const inputStyle = {
   width: "100%",
@@ -43,6 +44,14 @@ export default function NewEventPage() {
     prerequisites: [""],
     schedule: [{ time: "", topic: "" }],
     speakers: [{ name: "", role: "", topic: "" }],
+    formFields: [
+      { label: "Phone Number", type: "tel", required: true, options: "" },
+      { label: "College Year", type: "select", required: true, options: "1st Year, 2nd Year, 3rd Year, 4th Year" },
+      { label: "Branch", type: "text", required: true, options: "" },
+      { label: "Roll Number", type: "text", required: true, options: "" },
+    ],
+    featured: true,
+    status: "Upcoming",
   });
 
   // File upload state
@@ -83,6 +92,7 @@ export default function NewEventPage() {
       prerequisites: form.prerequisites.filter((p) => p.trim()),
       schedule: form.schedule.filter((s) => s.time.trim() || s.topic.trim()),
       speakers: form.speakers.filter((s) => s.name.trim()),
+      formFields: form.formFields.filter((f) => f.label.trim()),
       images,
       videos,
     };
@@ -156,8 +166,36 @@ export default function NewEventPage() {
               </select>
             </div>
             <div>
+              <label style={labelStyle}>STATUS</label>
+              <select
+                style={{ ...inputStyle, cursor: "pointer" }}
+                value={form.status}
+                onChange={(e) => update("status", e.target.value)}
+              >
+                {["Upcoming", "Ongoing", "Completed"].map((s) => (
+                  <option key={s} value={s} style={{ background: "#1a1a2e" }}>{s}</option>
+                ))}
+              </select>
+            </div>
+            <div>
               <label style={labelStyle}>CAPACITY</label>
               <input style={inputStyle} type="number" value={form.capacity} onChange={(e) => update("capacity", e.target.value)} min="1" required />
+            </div>
+            <div style={{ display: "flex", alignItems: "center", paddingTop: "20px" }}>
+              <label style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer" }}>
+                <div
+                  onClick={() => update("featured", !form.featured)}
+                  style={{
+                    width: "40px", height: "22px", borderRadius: "11px", position: "relative", cursor: "pointer",
+                    background: form.featured ? "linear-gradient(135deg, #6B21A8, #A855F7)" : "rgba(255,255,255,0.08)",
+                    border: `1px solid ${form.featured ? "rgba(168,85,247,0.5)" : "rgba(255,255,255,0.1)"}`,
+                    transition: "all 0.3s",
+                  }}
+                >
+                  <div style={{ width: "16px", height: "16px", borderRadius: "50%", background: "#fff", position: "absolute", top: "2px", left: form.featured ? "20px" : "2px", transition: "left 0.3s" }} />
+                </div>
+                <span style={{ fontSize: "11px", color: form.featured ? "#A855F7" : "rgba(245,245,245,0.3)", fontFamily: "var(--font-display)", letterSpacing: "0.1em" }}>SHOW ON HOMEPAGE</span>
+              </label>
             </div>
             <div style={{ gridColumn: "1 / -1" }}>
               <label style={labelStyle}>DESCRIPTION</label>
@@ -337,6 +375,9 @@ export default function NewEventPage() {
             + Add prerequisite
           </button>
         </div>
+
+        {/* Registration Form Fields */}
+        <FormFieldsEditor fields={form.formFields} onChange={(f) => update("formFields", f)} />
 
         {/* Media uploads */}
         <div

@@ -1,22 +1,13 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 gsap.registerPlugin(ScrollTrigger);
 
-const CERTIFICATIONS = [
-  { name: "Cloud Practitioner", code: "CLF-C02", level: "Foundational" },
-  { name: "Solutions Architect", code: "SAA-C03", level: "Associate" },
-  { name: "Developer", code: "DVA-C02", level: "Associate" },
-  { name: "SysOps Administrator", code: "SOA-C02", level: "Associate" },
-  { name: "DevOps Engineer", code: "DOP-C02", level: "Professional" },
-  { name: "Security Specialty", code: "SCS-C02", level: "Specialty" },
-  { name: "Machine Learning", code: "MLS-C01", level: "Specialty" },
-  { name: "Data Analytics", code: "DAS-C01", level: "Specialty" },
-];
+
 
 function CertBadge({ cert, index }) {
   return (
@@ -28,8 +19,14 @@ function CertBadge({ cert, index }) {
         boxShadow: "0 0 25px rgba(168, 85, 247, 0.2), 0 0 50px rgba(168, 85, 247, 0.05)",
       }}
     >
-      {/* Icon */}
-      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-deep to-purple-light flex items-center justify-center text-white text-lg font-bold mb-3" style={{ fontFamily: "var(--font-display)" }}>
+      {/* Icon - always cloud */}
+      <div 
+        className="w-12 h-12 rounded-xl flex items-center justify-center text-white text-lg font-bold mb-3" 
+        style={{ 
+          background: `linear-gradient(135deg, ${cert.color || "#A855F7"}, ${cert.color || "#A855F7"}88)`,
+          fontFamily: "var(--font-display)" 
+        }}
+      >
         ☁
       </div>
 
@@ -55,6 +52,16 @@ function CertBadge({ cert, index }) {
 export default function CertificationsSection() {
   const sectionRef = useRef(null);
   const titleRef = useRef(null);
+  const [certs, setCerts] = useState([]);
+
+  useEffect(() => {
+    fetch("/api/certifications")
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) setCerts(data);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const ctx = gsap.context(() => {
@@ -73,7 +80,7 @@ export default function CertificationsSection() {
     return () => ctx.revert();
   }, []);
 
-  const doubledCerts = [...CERTIFICATIONS, ...CERTIFICATIONS];
+  const doubledCerts = certs.length > 0 ? [...certs, ...certs, ...certs, ...certs].slice(0, Math.max(10, certs.length * 2)) : [];
 
   return (
     <section
@@ -111,23 +118,27 @@ export default function CertificationsSection() {
         </div>
       </div>
 
-      {/* Marquee Row 1 */}
-      <div className="relative mb-6 overflow-hidden">
-        <div className="flex gap-6 animate-[marquee_30s_linear_infinite] w-max">
-          {doubledCerts.map((cert, i) => (
-            <CertBadge key={`row1-${i}`} cert={cert} index={i % CERTIFICATIONS.length} />
-          ))}
-        </div>
-      </div>
+      {doubledCerts.length > 0 && (
+        <>
+          {/* Marquee Row 1 */}
+          <div className="relative mb-6" style={{ overflow: "clip", overflowClipMargin: "20px" }}>
+            <div className="flex gap-6 animate-[marquee_30s_linear_infinite] w-max py-4">
+              {doubledCerts.map((cert, i) => (
+                <CertBadge key={`row1-${i}`} cert={cert} index={i % certs.length} />
+              ))}
+            </div>
+          </div>
 
-      {/* Marquee Row 2 */}
-      <div className="relative overflow-hidden">
-        <div className="flex gap-6 animate-[marquee-reverse_35s_linear_infinite] w-max">
-          {doubledCerts.map((cert, i) => (
-            <CertBadge key={`row2-${i}`} cert={cert} index={(i + 4) % CERTIFICATIONS.length} />
-          ))}
-        </div>
-      </div>
+          {/* Marquee Row 2 */}
+          <div className="relative" style={{ overflow: "clip", overflowClipMargin: "20px" }}>
+            <div className="flex gap-6 animate-[marquee-reverse_35s_linear_infinite] w-max py-4">
+              {doubledCerts.map((cert, i) => (
+                <CertBadge key={`row2-${i}`} cert={cert} index={(i + 4) % certs.length} />
+              ))}
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Fade masks */}
       <div className="absolute left-0 top-0 bottom-0 w-24 md:w-40 bg-gradient-to-r from-dark to-transparent z-10 pointer-events-none" />

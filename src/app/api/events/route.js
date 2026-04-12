@@ -1,15 +1,23 @@
 import { NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import { readData, writeData } from "@/lib/dataStore";
 
-export async function GET() {
+export async function GET(request) {
   const events = readData("events");
+  const { searchParams } = new URL(request.url);
+  const featured = searchParams.get("featured");
+
+  if (featured === "true") {
+    // Return only featured events (default to featured if field not set)
+    return NextResponse.json(events.filter((e) => e.featured !== false));
+  }
+
   return NextResponse.json(events);
 }
 
 export async function POST(request) {
-  const session = getSession(request);
-  if (!session) {
+  const admin = await requireAdmin();
+  if (!admin) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -17,7 +25,6 @@ export async function POST(request) {
     const event = await request.json();
     const events = readData("events");
 
-    // Generate slug from title if not provided
     if (!event.slug) {
       event.slug = event.title
         .toLowerCase()
@@ -25,12 +32,10 @@ export async function POST(request) {
         .replace(/(^-|-$)/g, "");
     }
 
-    // Check for duplicate slug
     if (events.find((e) => e.slug === event.slug)) {
       return NextResponse.json({ error: "Event with this slug already exists" }, { status: 400 });
     }
 
-    // Set defaults
     event.images = event.images || [];
     event.videos = event.videos || [];
     event.schedule = event.schedule || [];

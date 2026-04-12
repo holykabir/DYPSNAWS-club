@@ -88,19 +88,21 @@ function RecentItem({ title, subtitle, type, color }) {
 }
 
 export default function DashboardPage() {
-  const [stats, setStats] = useState({ events: 0, members: 0, certifications: 0 });
+  const [stats, setStats] = useState({ events: 0, members: 0, contributors: 0, certifications: 0 });
   const [events, setEvents] = useState([]);
 
   useEffect(() => {
     Promise.all([
       fetch("/api/events").then((r) => r.json()),
       fetch("/api/team").then((r) => r.json()),
+      fetch("/api/team?type=contributor").then((r) => r.json()),
       fetch("/api/certifications").then((r) => r.json()),
-    ]).then(([evts, team, certs]) => {
+    ]).then(([evts, members, contribs, certs]) => {
       setEvents(evts.slice(0, 5));
       setStats({
         events: evts.length,
-        members: team.members?.length || 0,
+        members: Array.isArray(members) ? members.length : 0,
+        contributors: Array.isArray(contribs) ? contribs.length : 0,
         certifications: certs.length,
       });
     });
@@ -126,7 +128,7 @@ export default function DashboardPage() {
         />
         <StatCard
           label="Team Members"
-          value={stats.members}
+          value={stats.members + stats.contributors}
           color="#7C3AED"
           href="/admin/dashboard/team"
           icon={

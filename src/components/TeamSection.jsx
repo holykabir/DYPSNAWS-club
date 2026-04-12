@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import MemberCard from "./MemberCard";
-import { TEAM_MEMBERS } from "@/data/team";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -12,6 +11,16 @@ gsap.registerPlugin(ScrollTrigger);
 export default function TeamSection() {
   const sectionRef = useRef(null);
   const titleRef = useRef(null);
+  const [teamMembers, setTeamMembers] = useState([]);
+
+  useEffect(() => {
+    fetch("/api/team")
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) setTeamMembers(data);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const ctx = gsap.context(() => {
@@ -60,8 +69,8 @@ export default function TeamSection() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-          {TEAM_MEMBERS.map((member, index) => (
-            <MemberCard key={member.name} member={member} index={index} />
+          {teamMembers.map((member, index) => (
+            <MemberCard key={member.id || member.name} member={member} index={index} />
           ))}
         </div>
       </div>

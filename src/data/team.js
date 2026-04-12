@@ -1,10 +1,10 @@
 export const TEAM_MEMBERS = [
   {
     id: "arjun-mehta",
-    name: "Arjun Mehta",
+    name: "Tushar Kumbhar",
     role: "Club President",
     tagline: "Architecting the future, one Lambda at a time.",
-    avatar: "AM",
+    avatar: "TK",
     color: "#A855F7",
     bio: "A final-year Computer Science student with a passion for distributed systems. Arjun leads the club's vision and strategy, organizing flagship events and forging partnerships with AWS. He has deployed over 50 production workloads on AWS and mentors juniors on cloud architecture patterns.",
     certifications: ["Solutions Architect Associate", "Developer Associate", "Cloud Practitioner"],
@@ -88,7 +88,7 @@ export const TEAM_MEMBERS = [
 ];
 
 export const CONTRIBUTORS = [
-  { name: "Kavya Nair", role: "Workshop Facilitator", avatar: "KN", color: "#A855F7", tagline: "Breaking down complex topics into fun labs." },
+  { name: "Kabir Walvekar", role: "Workshop Facilitator", avatar: "KW", color: "#A855F7", tagline: "Breaking down complex topics into fun labs." },
   { name: "Aditya Patel", role: "Content Writer", avatar: "AP", color: "#C084FC", tagline: "Turning AWS jargon into clear guides." },
   { name: "Meera Iyer", role: "Design Lead", avatar: "MI", color: "#7C3AED", tagline: "Making cloud content look good." },
   { name: "Rohan Das", role: "Community Manager", avatar: "RD", color: "#9333EA", tagline: "Keeping the Discord buzzing." },

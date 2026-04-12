@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import AdminLayout from "@/components/admin/AdminLayout";
 
 const inputStyle = { width: "100%", padding: "10px 14px", borderRadius: "10px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(168,85,247,0.15)", color: "#F5F5F5", fontSize: "13px", outline: "none" };
@@ -9,14 +9,29 @@ const labelStyle = { display: "block", fontSize: "10px", fontFamily: "var(--font
 const COLORS = ["#A855F7", "#C084FC", "#7C3AED", "#9333EA", "#8B5CF6"];
 
 export default function NewMemberPage() {
+  return (
+    <Suspense fallback={<AdminLayout title="LOADING..."><div style={{ padding: "60px", textAlign: "center", color: "rgba(245,245,245,0.3)" }}>Loading...</div></AdminLayout>}>
+      <NewMemberForm />
+    </Suspense>
+  );
+}
+
+function NewMemberForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isContributor = searchParams.get("type") === "contributor";
+
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [form, setForm] = useState({
-    name: "", role: "", tagline: "", avatar: "", color: "#A855F7", bio: "",
-    certifications: [""],
-    social: { github: "", linkedin: "", twitter: "" },
-  });
+  const [form, setForm] = useState(
+    isContributor
+      ? { name: "", role: "", tagline: "", avatar: "", color: "#A855F7" }
+      : {
+          name: "", role: "", tagline: "", avatar: "", color: "#A855F7", bio: "",
+          certifications: [""],
+          social: { github: "", linkedin: "", twitter: "" },
+        }
+  );
 
   const update = (field, value) => setForm((p) => ({ ...p, [field]: value }));
 
@@ -25,11 +40,16 @@ export default function NewMemberPage() {
     setSaving(true);
     setError("");
 
-    const payload = {
-      ...form,
-      certifications: form.certifications.filter((c) => c.trim()),
-      social: Object.fromEntries(Object.entries(form.social).filter(([, v]) => v.trim())),
-    };
+    let payload;
+    if (isContributor) {
+      payload = { ...form, _type: "contributor" };
+    } else {
+      payload = {
+        ...form,
+        certifications: form.certifications.filter((c) => c.trim()),
+        social: Object.fromEntries(Object.entries(form.social).filter(([, v]) => v.trim())),
+      };
+    }
 
     try {
       const res = await fetch("/api/team", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
@@ -39,8 +59,10 @@ export default function NewMemberPage() {
     finally { setSaving(false); }
   };
 
+  const title = isContributor ? "ADD CONTRIBUTOR" : "ADD MEMBER";
+
   return (
-    <AdminLayout title="ADD MEMBER" subtitle="Add a new team member">
+    <AdminLayout title={title} subtitle={isContributor ? "Add a new contributor" : "Add a new team member"}>
       <form onSubmit={handleSubmit} style={{ maxWidth: "700px" }}>
         {error && <div style={{ padding: "10px 16px", borderRadius: "10px", background: "rgba(245,100,100,0.1)", border: "1px solid rgba(245,100,100,0.2)", color: "#F56565", fontSize: "13px", marginBottom: "20px" }}>{error}</div>}
 
@@ -57,33 +79,40 @@ export default function NewMemberPage() {
               </div>
             </div>
             <div style={{ gridColumn: "1 / -1" }}><label style={labelStyle}>TAGLINE</label><input style={inputStyle} value={form.tagline} onChange={(e) => update("tagline", e.target.value)} placeholder="Short tagline" /></div>
-            <div style={{ gridColumn: "1 / -1" }}><label style={labelStyle}>BIO</label><textarea style={{ ...inputStyle, minHeight: "100px", resize: "vertical" }} value={form.bio} onChange={(e) => update("bio", e.target.value)} /></div>
+            {!isContributor && (
+              <div style={{ gridColumn: "1 / -1" }}><label style={labelStyle}>BIO</label><textarea style={{ ...inputStyle, minHeight: "100px", resize: "vertical" }} value={form.bio} onChange={(e) => update("bio", e.target.value)} /></div>
+            )}
           </div>
         </div>
 
-        <div style={{ background: "rgba(107,33,168,0.06)", border: "1px solid rgba(168,85,247,0.12)", borderRadius: "16px", padding: "28px", marginBottom: "20px" }}>
-          <h3 style={{ fontSize: "12px", fontFamily: "var(--font-display)", letterSpacing: "0.15em", color: "rgba(245,245,245,0.4)", marginBottom: "20px" }}>CERTIFICATIONS</h3>
-          {form.certifications.map((c, i) => (
-            <div key={i} style={{ display: "flex", gap: "12px", marginBottom: "10px", alignItems: "center" }}>
-              <input style={inputStyle} value={c} onChange={(e) => { const arr = [...form.certifications]; arr[i] = e.target.value; update("certifications", arr); }} placeholder="Certification name" />
-              {form.certifications.length > 1 && <button type="button" onClick={() => update("certifications", form.certifications.filter((_, j) => j !== i))} style={{ color: "rgba(245,100,100,0.6)", background: "none", border: "none", cursor: "pointer", fontSize: "18px" }}>×</button>}
+        {/* Core members only: certs + social */}
+        {!isContributor && (
+          <>
+            <div style={{ background: "rgba(107,33,168,0.06)", border: "1px solid rgba(168,85,247,0.12)", borderRadius: "16px", padding: "28px", marginBottom: "20px" }}>
+              <h3 style={{ fontSize: "12px", fontFamily: "var(--font-display)", letterSpacing: "0.15em", color: "rgba(245,245,245,0.4)", marginBottom: "20px" }}>CERTIFICATIONS</h3>
+              {form.certifications.map((c, i) => (
+                <div key={i} style={{ display: "flex", gap: "12px", marginBottom: "10px", alignItems: "center" }}>
+                  <input style={inputStyle} value={c} onChange={(e) => { const arr = [...form.certifications]; arr[i] = e.target.value; update("certifications", arr); }} placeholder="Certification name" />
+                  {form.certifications.length > 1 && <button type="button" onClick={() => update("certifications", form.certifications.filter((_, j) => j !== i))} style={{ color: "rgba(245,100,100,0.6)", background: "none", border: "none", cursor: "pointer", fontSize: "18px" }}>×</button>}
+                </div>
+              ))}
+              <button type="button" onClick={() => update("certifications", [...form.certifications, ""])} style={{ color: "#A855F7", background: "none", border: "none", cursor: "pointer", fontSize: "12px" }}>+ Add certification</button>
             </div>
-          ))}
-          <button type="button" onClick={() => update("certifications", [...form.certifications, ""])} style={{ color: "#A855F7", background: "none", border: "none", cursor: "pointer", fontSize: "12px" }}>+ Add certification</button>
-        </div>
 
-        <div style={{ background: "rgba(107,33,168,0.06)", border: "1px solid rgba(168,85,247,0.12)", borderRadius: "16px", padding: "28px", marginBottom: "20px" }}>
-          <h3 style={{ fontSize: "12px", fontFamily: "var(--font-display)", letterSpacing: "0.15em", color: "rgba(245,245,245,0.4)", marginBottom: "20px" }}>SOCIAL LINKS</h3>
-          <div style={{ display: "grid", gap: "16px" }}>
-            <div><label style={labelStyle}>GITHUB</label><input style={inputStyle} value={form.social.github} onChange={(e) => update("social", { ...form.social, github: e.target.value })} placeholder="https://github.com/username" /></div>
-            <div><label style={labelStyle}>LINKEDIN</label><input style={inputStyle} value={form.social.linkedin} onChange={(e) => update("social", { ...form.social, linkedin: e.target.value })} placeholder="https://linkedin.com/in/username" /></div>
-            <div><label style={labelStyle}>TWITTER</label><input style={inputStyle} value={form.social.twitter} onChange={(e) => update("social", { ...form.social, twitter: e.target.value })} placeholder="https://twitter.com/username" /></div>
-          </div>
-        </div>
+            <div style={{ background: "rgba(107,33,168,0.06)", border: "1px solid rgba(168,85,247,0.12)", borderRadius: "16px", padding: "28px", marginBottom: "20px" }}>
+              <h3 style={{ fontSize: "12px", fontFamily: "var(--font-display)", letterSpacing: "0.15em", color: "rgba(245,245,245,0.4)", marginBottom: "20px" }}>SOCIAL LINKS</h3>
+              <div style={{ display: "grid", gap: "16px" }}>
+                <div><label style={labelStyle}>GITHUB</label><input style={inputStyle} value={form.social.github} onChange={(e) => update("social", { ...form.social, github: e.target.value })} placeholder="https://github.com/username" /></div>
+                <div><label style={labelStyle}>LINKEDIN</label><input style={inputStyle} value={form.social.linkedin} onChange={(e) => update("social", { ...form.social, linkedin: e.target.value })} placeholder="https://linkedin.com/in/username" /></div>
+                <div><label style={labelStyle}>TWITTER</label><input style={inputStyle} value={form.social.twitter} onChange={(e) => update("social", { ...form.social, twitter: e.target.value })} placeholder="https://twitter.com/username" /></div>
+              </div>
+            </div>
+          </>
+        )}
 
         <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end" }}>
           <button type="button" onClick={() => router.back()} style={{ padding: "10px 24px", borderRadius: "10px", border: "1px solid rgba(168,85,247,0.2)", background: "transparent", color: "rgba(245,245,245,0.5)", fontSize: "12px", cursor: "pointer", fontFamily: "var(--font-display)", letterSpacing: "0.1em" }}>CANCEL</button>
-          <button type="submit" disabled={saving} style={{ padding: "10px 24px", borderRadius: "10px", background: "linear-gradient(135deg, #6B21A8, #A855F7)", color: "#fff", fontSize: "12px", fontFamily: "var(--font-display)", letterSpacing: "0.1em", border: "none", cursor: "pointer", fontWeight: 600, opacity: saving ? 0.6 : 1 }}>{saving ? "SAVING..." : "ADD MEMBER"}</button>
+          <button type="submit" disabled={saving} style={{ padding: "10px 24px", borderRadius: "10px", background: "linear-gradient(135deg, #6B21A8, #A855F7)", color: "#fff", fontSize: "12px", fontFamily: "var(--font-display)", letterSpacing: "0.1em", border: "none", cursor: "pointer", fontWeight: 600, opacity: saving ? 0.6 : 1 }}>{saving ? "SAVING..." : isContributor ? "ADD CONTRIBUTOR" : "ADD MEMBER"}</button>
         </div>
       </form>
     </AdminLayout>

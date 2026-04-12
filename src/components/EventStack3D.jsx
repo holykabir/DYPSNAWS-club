@@ -1,235 +1,113 @@
 "use client";
 
 import { useRef, useState, useCallback, useEffect } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
-import { Text, RoundedBox, Html } from "@react-three/drei";
 import { useRouter } from "next/navigation";
-import * as THREE from "three";
-import { EVENTS } from "@/data/events";
+import Link from "next/link";
+import dynamic from "next/dynamic";
 
-function EventCard({ event, index, totalCount, scrollProgress }) {
-  const groupRef = useRef();
-  const [hovered, setHovered] = useState(false);
-  const router = useRouter();
-
-  const yPos = index * -2.8;
-
-  const handleClick = (e) => {
-    e.stopPropagation();
-    router.push(`/events/${event.slug}`);
-  };
-
-  useFrame((state) => {
-    if (!groupRef.current) return;
-
-    const targetY = yPos + scrollProgress * (totalCount * 2.8);
-    groupRef.current.position.y = THREE.MathUtils.lerp(
-      groupRef.current.position.y,
-      targetY,
-      0.06
-    );
-
-    const targetX = hovered ? 1.0 : 0;
-    const targetRotY = hovered ? -0.12 : 0;
-    const targetScale = hovered ? 1.06 : 1;
-
-    groupRef.current.position.x = THREE.MathUtils.lerp(
-      groupRef.current.position.x,
-      targetX,
-      0.08
-    );
-    groupRef.current.rotation.y = THREE.MathUtils.lerp(
-      groupRef.current.rotation.y,
-      targetRotY,
-      0.08
-    );
-    const s = THREE.MathUtils.lerp(
-      groupRef.current.scale.x,
-      targetScale,
-      0.08
-    );
-    groupRef.current.scale.set(s, s, s);
-
-    groupRef.current.rotation.z =
-      Math.sin(state.clock.elapsedTime * 0.25 + index) * 0.015;
-  });
+/* ── Mobile Event Card ── */
+function MobileEventCard({ event }) {
+  const status = event.status || "Upcoming";
+  const sc = status === "Completed" ? { c: "#22c55e", bg: "rgba(34,197,94,0.12)", b: "rgba(34,197,94,0.3)" }
+    : status === "Ongoing" ? { c: "#f59e0b", bg: "rgba(245,158,11,0.12)", b: "rgba(245,158,11,0.3)" }
+    : { c: "#3b82f6", bg: "rgba(59,130,246,0.12)", b: "rgba(59,130,246,0.3)" };
 
   return (
-    <group
-      ref={groupRef}
-      position={[0, yPos, 0]}
-      onClick={handleClick}
-      onPointerOver={(e) => {
-        e.stopPropagation();
-        setHovered(true);
-        document.body.style.cursor = "pointer";
-      }}
-      onPointerOut={(e) => {
-        e.stopPropagation();
-        setHovered(false);
-        document.body.style.cursor = "auto";
-      }}
+    <Link
+      href={`/events/${event.slug}`}
+      className="block glass-card p-6 hover:scale-[1.02] transition-all duration-300 relative"
+      style={{ boxShadow: `0 0 25px ${event.color || "#A855F7"}15` }}
     >
-      {/* Card body */}
-      <RoundedBox args={[5.5, 2.2, 0.06]} radius={0.08} smoothness={4}>
-        <meshStandardMaterial
-          color={hovered ? event.color : "#1a0533"}
-          transparent
-          opacity={hovered ? 0.92 : 0.65}
-          roughness={0.4}
-          metalness={0.3}
-        />
-      </RoundedBox>
+      {/* Status badge */}
+      <span
+        style={{
+          position: "absolute", top: "12px", right: "12px",
+          padding: "3px 10px", borderRadius: "999px", fontSize: "9px",
+          fontFamily: "var(--font-display)", letterSpacing: "0.1em", fontWeight: 600,
+          color: sc.c, background: sc.bg, border: `1px solid ${sc.b}`,
+        }}
+      >
+        {status.toUpperCase()}
+      </span>
 
-      {/* Glow border */}
-      <RoundedBox args={[5.56, 2.26, 0.01]} radius={0.08} smoothness={4}>
-        <meshBasicMaterial
-          color={event.color}
-          transparent
-          opacity={hovered ? 0.5 : 0.12}
-        />
-      </RoundedBox>
-
-      {/* Type badge */}
-      <Text
-        position={[-2.2, 0.7, 0.05]}
-        fontSize={0.13}
-        color={event.color}
-        anchorX="left"
-        letterSpacing={0.08}
+      <span
+        className="inline-block text-[10px] tracking-[0.2em] mb-2"
+        style={{ color: event.color || "#A855F7", fontFamily: "var(--font-display)" }}
       >
         {event.type}
-      </Text>
-
-      {/* Title */}
-      <Text
-        position={[-2.2, 0.2, 0.05]}
-        fontSize={0.3}
-        color="#F5F5F5"
-        anchorX="left"
-        maxWidth={4.5}
-        fontWeight="bold"
+      </span>
+      <h3 className="text-lg font-bold text-off-white mb-2">{event.title}</h3>
+      <div className="flex flex-wrap gap-4 text-xs text-off-white/40 mb-3">
+        <span>📅 {event.date}</span>
+        {event.location && <span>📍 {event.location}</span>}
+      </div>
+      <p className="text-sm text-off-white/30 line-clamp-2">{event.desc}</p>
+      <span
+        className="inline-block mt-4 text-xs tracking-[0.15em]"
+        style={{ color: event.color || "#A855F7", fontFamily: "var(--font-display)" }}
       >
-        {event.title}
-      </Text>
-
-      {/* Date */}
-      <Text
-        position={[-2.2, -0.2, 0.05]}
-        fontSize={0.14}
-        color="#A855F7"
-        anchorX="left"
-      >
-        {event.date}
-      </Text>
-
-      {/* Description */}
-      <Text
-        position={[-2.2, -0.6, 0.05]}
-        fontSize={0.12}
-        color="#999999"
-        anchorX="left"
-        maxWidth={4}
-        lineHeight={1.3}
-      >
-        {event.desc}
-      </Text>
-
-      {/* VIEW EVENT button — uses Html from drei for reliable click */}
-      {hovered && (
-        <Html position={[1.8, -0.6, 0.08]} center>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              router.push(`/events/${event.slug}`);
-            }}
-            className="px-5 py-2 text-[11px] font-bold tracking-[0.1em] text-white rounded-full whitespace-nowrap transition-all duration-300 hover:scale-105"
-            style={{
-              background: event.color,
-              fontFamily: "var(--font-display)",
-              boxShadow: `0 0 20px ${event.color}60`,
-              pointerEvents: "auto",
-            }}
-          >
-            VIEW EVENT →
-          </button>
-        </Html>
-      )}
-    </group>
+        VIEW EVENT →
+      </span>
+    </Link>
   );
 }
 
-function EventScene({ scrollProgress }) {
-  return (
-    <>
-      <ambientLight intensity={0.5} />
-      <pointLight position={[4, 4, 8]} intensity={0.7} color="#A855F7" />
-      <pointLight position={[-4, -4, 8]} intensity={0.3} color="#6B21A8" />
-      <fog attach="fog" args={["#0A0A0F", 6, 18]} />
+/* ── Desktop 3D Stack — separate component to avoid require() in render ── */
+const Desktop3DStack = dynamic(() => import("./EventStack3DDesktop"), { ssr: false });
 
-      {EVENTS.map((event, i) => (
-        <EventCard
-          key={event.slug}
-          event={event}
-          index={i}
-          totalCount={EVENTS.length}
-          scrollProgress={scrollProgress}
-        />
-      ))}
-    </>
-  );
-}
+export default function EventStack3D({ events: propEvents }) {
+  const [events, setEvents] = useState([]);
+  const [isMobile, setIsMobile] = useState(null); // null = not yet determined
 
-export default function EventStack3D() {
-  const [scrollProgress, setScrollProgress] = useState(0);
-
-  const handleScroll = useCallback(() => {
-    const eventsSection = document.getElementById("events");
-    if (!eventsSection) return;
-
-    const rect = eventsSection.getBoundingClientRect();
-    const sectionHeight = eventsSection.offsetHeight - window.innerHeight;
-    const scrolled = -rect.top;
-    const progress = Math.max(0, Math.min(1, scrolled / sectionHeight));
-    setScrollProgress(progress);
+  useEffect(() => {
+    // Determine mobile on client only
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
   useEffect(() => {
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, [handleScroll]);
+    // Load only featured events for homepage
+    fetch("/api/events?featured=true")
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) setEvents(data);
+      })
+      .catch(() => {});
+  }, []);
 
-  return (
-    <div className="w-full h-full relative">
-      <Canvas
-        camera={{ position: [0, 0, 6], fov: 50 }}
-        gl={{
-          antialias: true,
-          alpha: true,
-          powerPreference: "default",
-          failIfMajorPerformanceCaveat: false,
-        }}
-        style={{ background: "transparent", pointerEvents: "auto" }}
-        frameloop="demand"
-        onCreated={({ gl, invalidate }) => {
-          const animate = () => {
-            invalidate();
-            requestAnimationFrame(animate);
-          };
-          animate();
-        }}
-      >
-        <EventScene scrollProgress={scrollProgress} />
-      </Canvas>
+  // Don't render until mobile state is known (prevents flicker/hydration mismatch)
+  if (isMobile === null) return null;
 
-      <div
-        className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-3 text-xs text-purple-light/40 tracking-[0.15em] pointer-events-none"
-        style={{ fontFamily: "var(--font-display)" }}
-      >
-        <div className="w-8 h-px bg-purple-light/30" />
-        SCROLL TO EXPLORE
-        <div className="w-8 h-px bg-purple-light/30" />
+  if (events.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-64 text-off-white/30 text-sm">
+        No events yet
       </div>
-    </div>
-  );
+    );
+  }
+
+  // Mobile: show card list
+  if (isMobile) {
+    return (
+      <div className="px-6 py-12 space-y-4 max-w-xl mx-auto">
+        {events.map((event) => (
+          <MobileEventCard key={event.slug} event={event} />
+        ))}
+        <div className="text-center pt-4">
+          <Link
+            href="/events"
+            className="text-xs tracking-[0.2em] text-purple-light/50 hover:text-purple-light transition-colors"
+            style={{ fontFamily: "var(--font-display)" }}
+          >
+            VIEW ALL EVENTS →
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // Desktop: 3D stack (dynamically imported, no SSR)
+  return <Desktop3DStack events={events} />;
 }

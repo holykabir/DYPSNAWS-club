@@ -1,23 +1,53 @@
 import { NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import { readData, writeData } from "@/lib/dataStore";
 
-export async function GET() {
+export async function GET(request) {
   const data = readData("team");
-  return NextResponse.json(data);
+  const { searchParams } = new URL(request.url);
+  const type = searchParams.get("type");
+
+  // Auto-generate IDs for contributors that lack them
+  let needsSave = false;
+  (data.contributors || []).forEach((c) => {
+    if (!c.id && c.name) {
+      c.id = c.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+      needsSave = true;
+    }
+  });
+  if (needsSave) writeData("team", data);
+
+  if (type === "contributor") {
+    return NextResponse.json(data.contributors || []);
+  }
+
+  // Default: return members (core team)
+  return NextResponse.json(data.members || []);
 }
 
 export async function POST(request) {
-  const session = getSession(request);
-  if (!session) {
+  const admin = await requireAdmin();
+  if (!admin) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
-    const member = await request.json();
+    const body = await request.json();
     const data = readData("team");
+    const isContributor = body._type === "contributor";
+    delete body._type;
 
-    // Generate id from name if not provided
+    if (isContributor) {
+      // Add contributor
+      if (!data.contributors) data.contributors = [];
+      body.id = body.id || (body.name || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+      data.contributors.push(body);
+      writeData("team", data);
+      return NextResponse.json(body, { status: 201 });
+    }
+
+    // Add core team member
+    const member = body;
     if (!member.id) {
       member.id = member.name
         .toLowerCase()
@@ -25,12 +55,10 @@ export async function POST(request) {
         .replace(/(^-|-$)/g, "");
     }
 
-    // Check for duplicate id
     if (data.members.find((m) => m.id === member.id)) {
       return NextResponse.json({ error: "Member with this ID already exists" }, { status: 400 });
     }
 
-    // Set defaults
     member.social = member.social || {};
     member.certifications = member.certifications || [];
 

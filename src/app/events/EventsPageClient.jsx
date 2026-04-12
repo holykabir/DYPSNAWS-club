@@ -137,7 +137,25 @@ function EventCard({ event, index }) {
           }}
         />
 
-        {/* Type badge */}
+        {/* Status badge - top right */}
+        {(() => {
+          const status = event.status || "Upcoming";
+          const sc = status === "Completed" ? { c: "#22c55e", bg: "rgba(34,197,94,0.12)", b: "rgba(34,197,94,0.3)" }
+            : status === "Ongoing" ? { c: "#f59e0b", bg: "rgba(245,158,11,0.12)", b: "rgba(245,158,11,0.3)" }
+            : { c: "#3b82f6", bg: "rgba(59,130,246,0.12)", b: "rgba(59,130,246,0.3)" };
+          return (
+            <span style={{
+              position: "absolute", top: "16px", right: "16px", zIndex: 2,
+              padding: "4px 12px", borderRadius: "999px", fontSize: "9px",
+              fontFamily: "var(--font-display)", letterSpacing: "0.12em", fontWeight: 600,
+              color: sc.c, background: sc.bg, border: `1px solid ${sc.b}`,
+            }}>
+              {status.toUpperCase()}
+            </span>
+          );
+        })()}
+
+        {/* Type badge + date */}
         <div style={{ marginBottom: "16px", display: "flex", alignItems: "center", gap: "12px" }}>
           <span
             style={{

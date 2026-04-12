@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import { readData, writeData } from "@/lib/dataStore";
 
 export async function GET() {
@@ -8,8 +8,8 @@ export async function GET() {
 }
 
 export async function POST(request) {
-  const session = getSession(request);
-  if (!session) {
+  const admin = await requireAdmin();
+  if (!admin) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -17,7 +17,6 @@ export async function POST(request) {
     const cert = await request.json();
     const certs = readData("certifications");
 
-    // Generate id from name if not provided
     if (!cert.id) {
       cert.id = cert.name
         .toLowerCase()
@@ -25,7 +24,6 @@ export async function POST(request) {
         .replace(/(^-|-$)/g, "");
     }
 
-    // Check for duplicate id
     if (certs.find((c) => c.id === cert.id)) {
       return NextResponse.json({ error: "Certification with this ID already exists" }, { status: 400 });
     }

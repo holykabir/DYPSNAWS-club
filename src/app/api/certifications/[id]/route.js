@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import { readData, writeData } from "@/lib/dataStore";
 
 export async function GET(request, { params }) {
@@ -13,8 +13,8 @@ export async function GET(request, { params }) {
 }
 
 export async function PUT(request, { params }) {
-  const session = getSession(request);
-  if (!session) {
+  const admin = await requireAdmin();
+  if (!admin) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -38,8 +38,8 @@ export async function PUT(request, { params }) {
 }
 
 export async function DELETE(request, { params }) {
-  const session = getSession(request);
-  if (!session) {
+  const admin = await requireAdmin();
+  if (!admin) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

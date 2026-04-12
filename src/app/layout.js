@@ -16,7 +16,7 @@ const syncopate = Syncopate({
 });
 
 export const metadata = {
-  title: "AWS Cloud Club | Antigravity",
+  title: "AWS Cloud Clubs | D.Y Patil Salonkhenagar",
   description:
     "The official AWS Cloud Club of our college — learn, build, and certify with cloud technologies.",
 };

@@ -16,18 +16,23 @@ export default function EditCertPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [form, setForm] = useState(null);
+  const [image, setImage] = useState("");
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   useEffect(() => {
     fetch(`/api/certifications/${params.id}`)
       .then((r) => r.json())
       .then((data) => {
         if (data.error) setError(data.error);
-        else setForm({
-          name: data.name || "", code: data.code || "", level: data.level || "Associate",
-          color: data.color || "#A855F7", description: data.description || "",
-          duration: data.duration || "", questions: data.questions || 65,
-          passingScore: data.passingScore || "", topics: data.topics?.length ? data.topics : [""],
-        });
+        else {
+          setForm({
+            name: data.name || "", code: data.code || "", level: data.level || "Associate",
+            color: data.color || "#A855F7", description: data.description || "",
+            duration: data.duration || "", questions: data.questions || 65,
+            passingScore: data.passingScore || "", topics: data.topics?.length ? data.topics : [""],
+          });
+          setImage(data.image || "");
+        }
       })
       .finally(() => setLoading(false));
   }, [params.id]);
@@ -39,7 +44,7 @@ export default function EditCertPage() {
     setSaving(true);
     setError("");
 
-    const payload = { ...form, questions: Number(form.questions), topics: form.topics.filter((t) => t.trim()) };
+    const payload = { ...form, questions: Number(form.questions), topics: form.topics.filter((t) => t.trim()), image };
 
     try {
       const res = await fetch(`/api/certifications/${params.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
@@ -80,6 +85,32 @@ export default function EditCertPage() {
             </div>
           ))}
           <button type="button" onClick={() => update("topics", [...form.topics, ""])} style={{ color: "#A855F7", background: "none", border: "none", cursor: "pointer", fontSize: "12px" }}>+ Add topic</button>
+        </div>
+
+        {/* Certificate Image */}
+        <div style={{ background: "rgba(107,33,168,0.06)", border: "1px solid rgba(168,85,247,0.12)", borderRadius: "16px", padding: "28px", marginBottom: "20px" }}>
+          <h3 style={{ fontSize: "12px", fontFamily: "var(--font-display)", letterSpacing: "0.15em", color: "rgba(245,245,245,0.4)", marginBottom: "20px" }}>CERTIFICATE IMAGE</h3>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={async (e) => {
+              if (!e.target.files?.[0]) return;
+              setUploadingImage(true);
+              const fd = new FormData();
+              fd.append("file", e.target.files[0]);
+              const res = await fetch("/api/upload", { method: "POST", body: fd });
+              if (res.ok) { const d = await res.json(); setImage(d.url); }
+              setUploadingImage(false);
+            }}
+            style={{ ...inputStyle, cursor: "pointer" }}
+          />
+          {uploadingImage && <p style={{ fontSize: "11px", color: "#A855F7", marginTop: "4px" }}>Uploading...</p>}
+          {image && (
+            <div style={{ marginTop: "12px", position: "relative", display: "inline-block" }}>
+              <img src={image} alt="cert" style={{ width: "120px", height: "120px", objectFit: "cover", borderRadius: "12px", border: "1px solid rgba(168,85,247,0.2)" }} />
+              <button type="button" onClick={() => setImage("")} style={{ position: "absolute", top: "-6px", right: "-6px", width: "18px", height: "18px", borderRadius: "50%", background: "#F56565", color: "#fff", border: "none", cursor: "pointer", fontSize: "10px", display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
+            </div>
+          )}
         </div>
 
         <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end" }}>

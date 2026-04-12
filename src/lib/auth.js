@@ -1,57 +1,38 @@
-import crypto from "crypto";
-import { getAdmin } from "./dataStore";
+import { createClient } from "@/lib/supabase/server";
 
-export function hashPassword(password) {
-  return crypto.createHash("sha256").update(password).digest("hex");
+/**
+ * Check if a given email matches the admin email
+ */
+export function isAdmin(email) {
+  return email === (process.env.ADMIN_EMAIL || "admin@awsclub.dyp");
 }
 
-export function verifyPassword(password, hash) {
-  return hashPassword(password) === hash;
-}
+/**
+ * Get authenticated user from Supabase, verify admin role.
+ * Returns the user object if admin, or null.
+ */
+export async function requireAdmin() {
+  const supabase = await createClient();
+  const { data: { user }, error } = await supabase.auth.getUser();
 
-export function createToken(payload, secret) {
-  const header = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url");
-  const body = Buffer.from(
-    JSON.stringify({ ...payload, iat: Date.now(), exp: Date.now() + 24 * 60 * 60 * 1000 })
-  ).toString("base64url");
-  const signature = crypto
-    .createHmac("sha256", secret)
-    .update(`${header}.${body}`)
-    .digest("base64url");
-  return `${header}.${body}.${signature}`;
-}
-
-export function verifyToken(token, secret) {
-  try {
-    const [header, body, signature] = token.split(".");
-    const expected = crypto
-      .createHmac("sha256", secret)
-      .update(`${header}.${body}`)
-      .digest("base64url");
-    if (signature !== expected) return null;
-    const payload = JSON.parse(Buffer.from(body, "base64url").toString());
-    if (payload.exp < Date.now()) return null;
-    return payload;
-  } catch {
+  if (error || !user || !isAdmin(user.email)) {
     return null;
   }
+
+  return user;
 }
 
-export function getSession(request) {
-  const cookieHeader = request.headers.get("cookie") || "";
-  const match = cookieHeader.match(/admin_token=([^;]+)/);
-  if (!match) return null;
-  const admin = getAdmin();
-  return verifyToken(match[1], admin.secret);
-}
+/**
+ * Get authenticated user from Supabase (any user).
+ * Returns the user object or null.
+ */
+export async function getAuthUser() {
+  const supabase = await createClient();
+  const { data: { user }, error } = await supabase.auth.getUser();
 
-export function requireAuth(request) {
-  const session = getSession(request);
-  if (!session) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401,
-      headers: { "Content-Type": "application/json" },
-    });
+  if (error || !user) {
+    return null;
   }
-  return session;
+
+  return user;
 }

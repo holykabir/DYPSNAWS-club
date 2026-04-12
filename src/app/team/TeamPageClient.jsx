@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import SmoothScroller from "@/components/SmoothScroller";
 import PageTransition from "@/components/PageTransition";
-import TeamRoster from "@/components/TeamRoster";
+import dynamic from "next/dynamic";
 import Footer from "@/components/Footer";
-import { CONTRIBUTORS } from "@/data/team";
+
+const TeamRoster = dynamic(() => import("@/components/TeamRoster"), { ssr: false });
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -91,6 +92,17 @@ function ContributorCard({ member, index }) {
 
 export default function TeamPageClient() {
   const contributorsTitleRef = useRef(null);
+  const [contributors, setContributors] = useState([]);
+
+  useEffect(() => {
+    // Fetch contributors from API
+    fetch("/api/team?type=contributor")
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data)) setContributors(data);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!contributorsTitleRef.current) return;
@@ -163,8 +175,8 @@ export default function TeamPageClient() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-              {CONTRIBUTORS.map((member, index) => (
-                <ContributorCard key={member.name} member={member} index={index} />
+              {contributors.map((member, index) => (
+                <ContributorCard key={member.name || index} member={member} index={index} />
               ))}
             </div>
           </div>

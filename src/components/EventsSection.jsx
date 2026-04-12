@@ -1,17 +1,24 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import EventStack3D from "./EventStack3D";
+import dynamic from "next/dynamic";
 
 gsap.registerPlugin(ScrollTrigger);
+
+const EventStack3D = dynamic(() => import("./EventStack3D"), { ssr: false });
 
 export default function EventsSection() {
   const sectionRef = useRef(null);
   const titleRef = useRef(null);
+  const [isMobile, setIsMobile] = useState(null); // null = not determined yet
 
   useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+
     const ctx = gsap.context(() => {
       gsap.from(titleRef.current, {
         y: 60,
@@ -25,7 +32,10 @@ export default function EventsSection() {
       });
     }, sectionRef);
 
-    return () => ctx.revert();
+    return () => {
+      ctx.revert();
+      window.removeEventListener("resize", checkMobile);
+    };
   }, []);
 
   return (
@@ -55,12 +65,20 @@ export default function EventsSection() {
         </div>
       </div>
 
-      {/* 3D Event Stack Canvas — pinned on scroll */}
-      <div className="relative h-[300vh]">
-        <div className="sticky top-0 h-screen w-full">
+      {/* Wait for client-side hydration before rendering */}
+      {isMobile === null ? (
+        <div className="h-64" />
+      ) : isMobile ? (
+        <div className="pb-16">
           <EventStack3D />
         </div>
-      </div>
+      ) : (
+        <div className="relative h-[300vh]">
+          <div className="sticky top-0 h-screen w-full">
+            <EventStack3D />
+          </div>
+        </div>
+      )}
     </section>
   );
 }
