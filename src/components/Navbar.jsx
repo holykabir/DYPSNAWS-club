@@ -7,8 +7,8 @@ export default function Navbar() {
   const pathname = usePathname();
   const isHome = pathname === "/";
 
-  // Don't show navbar on the landing page (it has its own nav)
-  if (isHome) return null;
+  // Don't show navbar on the landing page (it has its own nav) or admin pages
+  if (isHome || pathname.startsWith("/admin")) return null;
 
   const links = [
     { label: "HOME", href: "/" },

@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { useParams, notFound } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { useParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { gsap } from "gsap";
@@ -10,7 +10,6 @@ import SmoothScroller from "@/components/SmoothScroller";
 import PageTransition from "@/components/PageTransition";
 import MagneticButton from "@/components/MagneticButton";
 import Footer from "@/components/Footer";
-import { getEventBySlug } from "@/data/events";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -20,27 +19,39 @@ const EventDetailHero = dynamic(() => import("@/components/EventDetailHero"), {
 
 export default function EventDetailPage() {
   const params = useParams();
-  const event = getEventBySlug(params.slug);
+  const [event, setEvent] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   const titleRef = useRef(null);
   const metaRef = useRef(null);
   const contentRef = useRef(null);
 
   useEffect(() => {
+    fetch(`/api/events/${params.slug}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data.error) setEvent(data);
+      })
+      .finally(() => setLoading(false));
+  }, [params.slug]);
+
+  useEffect(() => {
     if (!event) return;
 
     const ctx = gsap.context(() => {
       // Title parallax
-      gsap.to(titleRef.current, {
-        yPercent: -30,
-        ease: "none",
-        scrollTrigger: {
-          trigger: titleRef.current,
-          start: "top 20%",
-          end: "bottom top",
-          scrub: 1,
-        },
-      });
+      if (titleRef.current) {
+        gsap.to(titleRef.current, {
+          yPercent: -30,
+          ease: "none",
+          scrollTrigger: {
+            trigger: titleRef.current,
+            start: "top 20%",
+            end: "bottom top",
+            scrub: 1,
+          },
+        });
+      }
 
       // Content sections fade in
       const sections = contentRef.current?.querySelectorAll(".reveal-section");
@@ -62,6 +73,19 @@ export default function EventDetailPage() {
 
     return () => ctx.revert();
   }, [event]);
+
+  if (loading) {
+    return (
+      <SmoothScroller>
+        <PageTransition>
+          <div className="min-h-screen flex items-center justify-center gradient-hero">
+            <div style={{ width: "36px", height: "36px", border: "3px solid rgba(168,85,247,0.2)", borderTopColor: "#A855F7", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+            <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+          </div>
+        </PageTransition>
+      </SmoothScroller>
+    );
+  }
 
   if (!event) {
     return (
@@ -175,7 +199,7 @@ export default function EventDetailPage() {
               SCHEDULE
             </h2>
             <div className="space-y-4">
-              {event.schedule.map((item, i) => (
+              {event.schedule?.map((item, i) => (
                 <div
                   key={i}
                   className="glass-card px-6 py-4 flex flex-col sm:flex-row sm:items-center gap-3 group hover:shadow-[0_0_30px_rgba(168,85,247,0.15)] transition-shadow duration-500"
@@ -193,6 +217,34 @@ export default function EventDetailPage() {
             </div>
           </section>
 
+          {/* Event images */}
+          {event.images && event.images.length > 0 && (
+            <section className="reveal-section max-w-4xl mx-auto px-6 md:px-16 pb-20">
+              <h2 className="text-2xl md:text-4xl font-bold text-gradient mb-10" style={{ fontFamily: "var(--font-display)" }}>
+                GALLERY
+              </h2>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "16px" }}>
+                {event.images.map((img, i) => (
+                  <img key={i} src={img} alt={`${event.title} image ${i + 1}`} style={{ width: "100%", height: "200px", objectFit: "cover", borderRadius: "12px", border: "1px solid rgba(168,85,247,0.15)" }} />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Event videos */}
+          {event.videos && event.videos.length > 0 && (
+            <section className="reveal-section max-w-4xl mx-auto px-6 md:px-16 pb-20">
+              <h2 className="text-2xl md:text-4xl font-bold text-gradient mb-10" style={{ fontFamily: "var(--font-display)" }}>
+                VIDEOS
+              </h2>
+              <div style={{ display: "grid", gap: "16px" }}>
+                {event.videos.map((vid, i) => (
+                  <video key={i} src={vid} controls style={{ width: "100%", maxWidth: "640px", borderRadius: "12px", border: "1px solid rgba(168,85,247,0.15)" }} />
+                ))}
+              </div>
+            </section>
+          )}
+
           {/* Prerequisites & Speakers in two columns */}
           <section className="reveal-section max-w-4xl mx-auto px-6 md:px-16 pb-20">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
@@ -205,7 +257,7 @@ export default function EventDetailPage() {
                   PREREQUISITES
                 </h2>
                 <ul className="space-y-3">
-                  {event.prerequisites.map((prereq, i) => (
+                  {event.prerequisites?.map((prereq, i) => (
                     <li key={i} className="flex items-start gap-3">
                       <span className="mt-1 w-2 h-2 rounded-full bg-purple-light flex-shrink-0" />
                       <span className="text-off-white/60 text-sm leading-relaxed">
@@ -225,7 +277,7 @@ export default function EventDetailPage() {
                   SPEAKERS
                 </h2>
                 <div className="space-y-4">
-                  {event.speakers.map((speaker, i) => (
+                  {event.speakers?.map((speaker, i) => (
                     <div key={i} className="glass-card p-5">
                       <h4 className="text-off-white font-semibold mb-1">
                         {speaker.name}

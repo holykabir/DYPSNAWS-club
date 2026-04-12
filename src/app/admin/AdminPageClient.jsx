@@ -1,18 +1,78 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 export default function AdminPageClient() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [focused, setFocused] = useState(null);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+  const router = useRouter();
 
-  const handleSubmit = (e) => {
+  // Check if already logged in
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((r) => {
+        if (r.ok) router.replace("/admin/dashboard");
+        else setCheckingAuth(false);
+      })
+      .catch(() => setCheckingAuth(false));
+  }, [router]);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Placeholder — wire up actual auth later
-    alert("Authentication not yet configured.");
+    setError("");
+    setLoading(true);
+
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (res.ok) {
+        router.push("/admin/dashboard");
+      } else {
+        const data = await res.json();
+        setError(data.error || "Invalid credentials");
+      }
+    } catch {
+      setError("Network error. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
+
+  if (checkingAuth) {
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "#0A0A0F",
+        }}
+      >
+        <div
+          style={{
+            width: "36px",
+            height: "36px",
+            border: "3px solid rgba(168,85,247,0.2)",
+            borderTopColor: "#A855F7",
+            borderRadius: "50%",
+            animation: "spin 0.8s linear infinite",
+          }}
+        />
+        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center relative overflow-hidden">
@@ -52,6 +112,24 @@ export default function AdminPageClient() {
             </p>
           </div>
 
+          {/* Error */}
+          {error && (
+            <div
+              style={{
+                padding: "10px 16px",
+                borderRadius: "10px",
+                background: "rgba(245,100,100,0.1)",
+                border: "1px solid rgba(245,100,100,0.2)",
+                color: "#F56565",
+                fontSize: "13px",
+                marginBottom: "20px",
+                textAlign: "center",
+              }}
+            >
+              {error}
+            </div>
+          )}
+
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Email */}
@@ -70,7 +148,7 @@ export default function AdminPageClient() {
                   borderColor: focused === "email" ? "rgba(168, 85, 247, 0.5)" : "rgba(168, 85, 247, 0.1)",
                   boxShadow: focused === "email" ? "0 0 20px rgba(168, 85, 247, 0.1)" : "none",
                 }}
-                placeholder="admin@cloudclub.edu"
+                placeholder="admin@awsclub.dyp"
                 required
               />
             </div>
@@ -99,10 +177,11 @@ export default function AdminPageClient() {
             {/* Submit */}
             <button
               type="submit"
-              className="w-full py-3.5 rounded-xl text-sm font-semibold tracking-[0.15em] text-white bg-gradient-to-r from-purple-deep to-purple-light hover:from-purple-light hover:to-purple-glow transition-all duration-500 shadow-[0_0_20px_rgba(168,85,247,0.2)] hover:shadow-[0_0_30px_rgba(168,85,247,0.4)]"
+              disabled={loading}
+              className="w-full py-3.5 rounded-xl text-sm font-semibold tracking-[0.15em] text-white bg-gradient-to-r from-purple-deep to-purple-light hover:from-purple-light hover:to-purple-glow transition-all duration-500 shadow-[0_0_20px_rgba(168,85,247,0.2)] hover:shadow-[0_0_30px_rgba(168,85,247,0.4)] disabled:opacity-50"
               style={{ fontFamily: "var(--font-display)" }}
             >
-              SIGN IN
+              {loading ? "SIGNING IN..." : "SIGN IN"}
             </button>
           </form>
 

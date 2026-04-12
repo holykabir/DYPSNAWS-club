@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useMemo, useCallback } from "react";
+import { useRef, useState, useMemo, useCallback, useEffect } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Text, RoundedBox, Stars } from "@react-three/drei";
 import { useRouter } from "next/navigation";
