@@ -14,6 +14,7 @@ export default function Navbar() {
     { label: "HOME", href: "/" },
     { label: "EVENTS", href: "/events" },
     { label: "TEAM", href: "/team" },
+    { label: "QUIZ", href: "/quiz" },
     { label: "CERTS", href: "/certifications" },
   ];
 

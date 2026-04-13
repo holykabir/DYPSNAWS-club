@@ -1,28 +1,38 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
-import { readData, writeData } from "@/lib/dataStore";
+import supabaseAdmin from "@/lib/supabaseAdmin";
 
 export async function GET(request) {
-  const data = readData("team");
   const { searchParams } = new URL(request.url);
   const type = searchParams.get("type");
 
-  // Auto-generate IDs for contributors that lack them
-  let needsSave = false;
-  (data.contributors || []).forEach((c) => {
-    if (!c.id && c.name) {
-      c.id = c.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
-      needsSave = true;
-    }
-  });
-  if (needsSave) writeData("team", data);
+  const memberType = type === "contributor" ? "contributor" : "core";
 
-  if (type === "contributor") {
-    return NextResponse.json(data.contributors || []);
+  const { data, error } = await supabaseAdmin
+    .from("team_members")
+    .select("*")
+    .eq("member_type", memberType)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    console.error("Error fetching team:", error);
+    return NextResponse.json([]);
   }
 
-  // Default: return members (core team)
-  return NextResponse.json(data.members || []);
+  // Map DB rows to frontend format
+  const members = (data || []).map((m) => ({
+    id: m.id,
+    name: m.name,
+    role: m.role,
+    tagline: m.tagline,
+    avatar: m.avatar,
+    color: m.color,
+    bio: m.bio || "",
+    certifications: m.certifications || [],
+    social: m.social || {},
+  }));
+
+  return NextResponse.json(members);
 }
 
 export async function POST(request) {
@@ -33,40 +43,52 @@ export async function POST(request) {
 
   try {
     const body = await request.json();
-    const data = readData("team");
     const isContributor = body._type === "contributor";
     delete body._type;
 
-    if (isContributor) {
-      // Add contributor
-      if (!data.contributors) data.contributors = [];
-      body.id = body.id || (body.name || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
-      data.contributors.push(body);
-      writeData("team", data);
-      return NextResponse.json(body, { status: 201 });
-    }
+    const id = body.id || (body.name || "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "");
 
-    // Add core team member
-    const member = body;
-    if (!member.id) {
-      member.id = member.name
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/(^-|-$)/g, "");
-    }
+    // Check if ID already exists
+    const { data: existing } = await supabaseAdmin
+      .from("team_members")
+      .select("id")
+      .eq("id", id)
+      .single();
 
-    if (data.members.find((m) => m.id === member.id)) {
+    if (existing) {
       return NextResponse.json({ error: "Member with this ID already exists" }, { status: 400 });
     }
 
-    member.social = member.social || {};
-    member.certifications = member.certifications || [];
+    const row = {
+      id,
+      name: body.name,
+      role: body.role,
+      tagline: body.tagline || "",
+      avatar: body.avatar || "",
+      color: body.color || "#A855F7",
+      bio: body.bio || "",
+      member_type: isContributor ? "contributor" : "core",
+      certifications: body.certifications || [],
+      social: body.social || {},
+    };
 
-    data.members.push(member);
-    writeData("team", data);
+    const { data, error } = await supabaseAdmin
+      .from("team_members")
+      .insert(row)
+      .select()
+      .single();
 
-    return NextResponse.json(member, { status: 201 });
+    if (error) {
+      console.error("Error creating member:", error);
+      return NextResponse.json({ error: "Failed to create member" }, { status: 500 });
+    }
+
+    return NextResponse.json(data, { status: 201 });
   } catch (err) {
+    console.error("Error creating member:", err);
     return NextResponse.json({ error: "Failed to create member" }, { status: 500 });
   }
 }

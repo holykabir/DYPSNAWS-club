@@ -88,7 +88,7 @@ function RecentItem({ title, subtitle, type, color }) {
 }
 
 export default function DashboardPage() {
-  const [stats, setStats] = useState({ events: 0, members: 0, contributors: 0, certifications: 0 });
+  const [stats, setStats] = useState({ events: 0, members: 0, contributors: 0, certifications: 0, quizzes: 0 });
   const [events, setEvents] = useState([]);
 
   useEffect(() => {
@@ -97,13 +97,15 @@ export default function DashboardPage() {
       fetch("/api/team").then((r) => r.json()),
       fetch("/api/team?type=contributor").then((r) => r.json()),
       fetch("/api/certifications").then((r) => r.json()),
-    ]).then(([evts, members, contribs, certs]) => {
+      fetch("/api/quizzes").then((r) => r.json()),
+    ]).then(([evts, members, contribs, certs, quizzes]) => {
       setEvents(evts.slice(0, 5));
       setStats({
         events: evts.length,
         members: Array.isArray(members) ? members.length : 0,
         contributors: Array.isArray(contribs) ? contribs.length : 0,
         certifications: certs.length,
+        quizzes: Array.isArray(quizzes) ? quizzes.length : 0,
       });
     });
   }, []);
@@ -149,6 +151,19 @@ export default function DashboardPage() {
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="8" r="7" />
               <polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88" />
+            </svg>
+          }
+        />
+        <StatCard
+          label="Quizzes"
+          value={stats.quizzes}
+          color="#34D399"
+          href="/admin/dashboard/quizzes"
+          icon={
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+              <line x1="12" y1="17" x2="12.01" y2="17" />
             </svg>
           }
         />

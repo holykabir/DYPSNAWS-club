@@ -138,7 +138,6 @@ export default function Footer() {
         {/* Bottom bar */}
         <div className="mt-16 pt-6 border-t border-purple-deep/15 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-xs text-off-white/25">
-            © 2026 AWS Cloud Clubs. Built with ☁ and ambition.
           </p>
           <div className="flex items-center gap-6">
             <p className="text-xs text-off-white/20">
@@ -152,12 +151,6 @@ export default function Footer() {
                 Kabir Walvekar
               </a>.
             </p>
-            <Link
-              href="/admin"
-              className="text-[10px] text-off-white/15 hover:text-purple-light/40 transition-colors duration-300 tracking-[0.1em]"
-            >
-              ADMIN
-            </Link>
           </div>
         </div>
       </div>

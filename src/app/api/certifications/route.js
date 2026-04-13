@@ -1,9 +1,32 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
-import { readData, writeData } from "@/lib/dataStore";
+import supabaseAdmin from "@/lib/supabaseAdmin";
 
 export async function GET() {
-  const certs = readData("certifications");
+  const { data, error } = await supabaseAdmin
+    .from("certifications")
+    .select("*")
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    console.error("Error fetching certifications:", error);
+    return NextResponse.json([]);
+  }
+
+  const certs = (data || []).map((c) => ({
+    id: c.id,
+    name: c.name,
+    code: c.code,
+    level: c.level,
+    color: c.color,
+    description: c.description,
+    duration: c.duration,
+    questions: c.questions,
+    passingScore: c.passing_score,
+    topics: c.topics || [],
+    image: c.image || "",
+  }));
+
   return NextResponse.json(certs);
 }
 
@@ -15,26 +38,50 @@ export async function POST(request) {
 
   try {
     const cert = await request.json();
-    const certs = readData("certifications");
 
-    if (!cert.id) {
-      cert.id = cert.name
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/(^-|-$)/g, "");
-    }
+    const id = cert.id || cert.name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "");
 
-    if (certs.find((c) => c.id === cert.id)) {
+    const { data: existing } = await supabaseAdmin
+      .from("certifications")
+      .select("id")
+      .eq("id", id)
+      .single();
+
+    if (existing) {
       return NextResponse.json({ error: "Certification with this ID already exists" }, { status: 400 });
     }
 
-    cert.topics = cert.topics || [];
+    const row = {
+      id,
+      name: cert.name,
+      code: cert.code || "",
+      level: cert.level || "",
+      color: cert.color || "#A855F7",
+      description: cert.description || "",
+      duration: cert.duration || "",
+      questions: cert.questions || 0,
+      passing_score: cert.passingScore || "",
+      topics: cert.topics || [],
+      image: cert.image || "",
+    };
 
-    certs.push(cert);
-    writeData("certifications", certs);
+    const { data, error } = await supabaseAdmin
+      .from("certifications")
+      .insert(row)
+      .select()
+      .single();
 
-    return NextResponse.json(cert, { status: 201 });
+    if (error) {
+      console.error("Error creating certification:", error);
+      return NextResponse.json({ error: "Failed to create certification" }, { status: 500 });
+    }
+
+    return NextResponse.json({ ...cert, id: data.id }, { status: 201 });
   } catch (err) {
+    console.error("Error creating certification:", err);
     return NextResponse.json({ error: "Failed to create certification" }, { status: 500 });
   }
 }

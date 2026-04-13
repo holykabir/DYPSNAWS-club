@@ -7,6 +7,7 @@ import SmoothScroller from "@/components/SmoothScroller";
 import PageTransition from "@/components/PageTransition";
 import dynamic from "next/dynamic";
 import Footer from "@/components/Footer";
+import useRealtimeTable from "@/hooks/useRealtimeTable";
 
 const TeamRoster = dynamic(() => import("@/components/TeamRoster"), { ssr: false });
 
@@ -92,17 +93,17 @@ function ContributorCard({ member, index }) {
 
 export default function TeamPageClient() {
   const contributorsTitleRef = useRef(null);
-  const [contributors, setContributors] = useState([]);
-
-  useEffect(() => {
-    // Fetch contributors from API
-    fetch("/api/team?type=contributor")
-      .then((r) => r.json())
-      .then((data) => {
-        if (Array.isArray(data)) setContributors(data);
-      })
-      .catch(() => {});
-  }, []);
+  const { data: contributors } = useRealtimeTable("team_members", "/api/team?type=contributor", {
+    transform: (row) => ({
+      id: row.id,
+      name: row.name,
+      role: row.role,
+      tagline: row.tagline,
+      avatar: row.avatar,
+      color: row.color,
+    }),
+    filter: { column: "member_type", value: "contributor" },
+  });
 
   useEffect(() => {
     if (!contributorsTitleRef.current) return;

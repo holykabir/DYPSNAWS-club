@@ -4,23 +4,29 @@ import { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import MemberCard from "./MemberCard";
+import useRealtimeTable from "@/hooks/useRealtimeTable";
 
 gsap.registerPlugin(ScrollTrigger);
 
+const transformMember = (row) => ({
+  id: row.id,
+  name: row.name,
+  role: row.role,
+  tagline: row.tagline,
+  avatar: row.avatar,
+  color: row.color,
+  bio: row.bio || "",
+  certifications: row.certifications || [],
+  social: row.social || {},
+});
 
 export default function TeamSection() {
   const sectionRef = useRef(null);
   const titleRef = useRef(null);
-  const [teamMembers, setTeamMembers] = useState([]);
-
-  useEffect(() => {
-    fetch("/api/team")
-      .then((res) => res.json())
-      .then((data) => {
-        if (Array.isArray(data)) setTeamMembers(data);
-      })
-      .catch(() => {});
-  }, []);
+  const { data: teamMembers } = useRealtimeTable("team_members", "/api/team", {
+    transform: transformMember,
+    filter: { column: "member_type", value: "core" },
+  });
 
   useEffect(() => {
     const ctx = gsap.context(() => {

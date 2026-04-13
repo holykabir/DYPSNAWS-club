@@ -2,23 +2,33 @@
 
 import { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
+import useRealtimeTable from "@/hooks/useRealtimeTable";
+
+const transformMember = (row) => ({
+  id: row.id,
+  name: row.name,
+  role: row.role,
+  tagline: row.tagline,
+  avatar: row.avatar,
+  color: row.color,
+  bio: row.bio || "",
+  certifications: row.certifications || [],
+  social: row.social || {},
+});
 
 export default function TeamRoster() {
-  const [teamMembers, setTeamMembers] = useState([]);
+  const { data: teamMembers } = useRealtimeTable("team_members", "/api/team", {
+    transform: transformMember,
+    filter: { column: "member_type", value: "core" },
+  });
   const [selectedId, setSelectedId] = useState(null);
   const containerRef = useRef(null);
   const cardsRef = useRef({});
   const overlayRef = useRef(null);
   const detailRef = useRef(null);
 
-  const selected = teamMembers.find((m) => m.id === selectedId);
 
-  useEffect(() => {
-    fetch("/api/team")
-      .then((r) => r.json())
-      .then((data) => { if (Array.isArray(data)) setTeamMembers(data); })
-      .catch(() => {});
-  }, []);
+  const selected = teamMembers.find((m) => m.id === selectedId);
 
   useEffect(() => {
     if (teamMembers.length === 0) return;

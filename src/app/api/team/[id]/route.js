@@ -1,24 +1,33 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
-import { readData, writeData } from "@/lib/dataStore";
+import supabaseAdmin from "@/lib/supabaseAdmin";
 
 export async function GET(request, { params }) {
   const { id } = await params;
-  const data = readData("team");
   const { searchParams } = new URL(request.url);
   const type = searchParams.get("type");
 
-  if (type === "contributor") {
-    const contributor = (data.contributors || []).find((c) => c.id === id);
-    if (!contributor) return NextResponse.json({ error: "Contributor not found" }, { status: 404 });
-    return NextResponse.json(contributor);
-  }
+  const { data, error } = await supabaseAdmin
+    .from("team_members")
+    .select("*")
+    .eq("id", id)
+    .single();
 
-  const member = data.members.find((m) => m.id === id);
-  if (!member) {
+  if (error || !data) {
     return NextResponse.json({ error: "Member not found" }, { status: 404 });
   }
-  return NextResponse.json(member);
+
+  return NextResponse.json({
+    id: data.id,
+    name: data.name,
+    role: data.role,
+    tagline: data.tagline,
+    avatar: data.avatar,
+    color: data.color,
+    bio: data.bio || "",
+    certifications: data.certifications || [],
+    social: data.social || {},
+  });
 }
 
 export async function PUT(request, { params }) {
@@ -30,30 +39,42 @@ export async function PUT(request, { params }) {
   try {
     const { id } = await params;
     const updates = await request.json();
-    const data = readData("team");
-    const isContributor = updates._type === "contributor";
     delete updates._type;
 
-    if (isContributor) {
-      if (!data.contributors) data.contributors = [];
-      const index = data.contributors.findIndex((c) => c.id === id);
-      if (index === -1) return NextResponse.json({ error: "Contributor not found" }, { status: 404 });
-      
-      data.contributors[index] = { ...data.contributors[index], ...updates };
-      writeData("team", data);
-      return NextResponse.json(data.contributors[index]);
-    }
+    const row = {};
+    if (updates.name !== undefined) row.name = updates.name;
+    if (updates.role !== undefined) row.role = updates.role;
+    if (updates.tagline !== undefined) row.tagline = updates.tagline;
+    if (updates.avatar !== undefined) row.avatar = updates.avatar;
+    if (updates.color !== undefined) row.color = updates.color;
+    if (updates.bio !== undefined) row.bio = updates.bio;
+    if (updates.certifications !== undefined) row.certifications = updates.certifications;
+    if (updates.social !== undefined) row.social = updates.social;
 
-    const index = data.members.findIndex((m) => m.id === id);
-    if (index === -1) {
+    const { data, error } = await supabaseAdmin
+      .from("team_members")
+      .update(row)
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error || !data) {
       return NextResponse.json({ error: "Member not found" }, { status: 404 });
     }
 
-    data.members[index] = { ...data.members[index], ...updates };
-    writeData("team", data);
-
-    return NextResponse.json(data.members[index]);
+    return NextResponse.json({
+      id: data.id,
+      name: data.name,
+      role: data.role,
+      tagline: data.tagline,
+      avatar: data.avatar,
+      color: data.color,
+      bio: data.bio || "",
+      certifications: data.certifications || [],
+      social: data.social || {},
+    });
   } catch (err) {
+    console.error("Error updating member:", err);
     return NextResponse.json({ error: "Failed to update member" }, { status: 500 });
   }
 }
@@ -66,27 +87,16 @@ export async function DELETE(request, { params }) {
 
   try {
     const { id } = await params;
-    const data = readData("team");
-    const { searchParams } = new URL(request.url);
-    const type = searchParams.get("type");
 
-    if (type === "contributor") {
-      if (!data.contributors) data.contributors = [];
-      const filtered = data.contributors.filter((c) => c.id !== id);
-      if (filtered.length === data.contributors.length) return NextResponse.json({ error: "Contributor not found" }, { status: 404 });
-      data.contributors = filtered;
-      writeData("team", data);
-      return NextResponse.json({ success: true });
+    const { error } = await supabaseAdmin
+      .from("team_members")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      return NextResponse.json({ error: "Failed to delete member" }, { status: 500 });
     }
 
-    const filtered = data.members.filter((m) => m.id !== id);
-
-    if (filtered.length === data.members.length) {
-      return NextResponse.json({ error: "Member not found" }, { status: 404 });
-    }
-
-    data.members = filtered;
-    writeData("team", data);
     return NextResponse.json({ success: true });
   } catch (err) {
     return NextResponse.json({ error: "Failed to delete member" }, { status: 500 });

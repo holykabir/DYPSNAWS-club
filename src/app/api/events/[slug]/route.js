@@ -1,15 +1,43 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
-import { readData, writeData } from "@/lib/dataStore";
+import supabaseAdmin from "@/lib/supabaseAdmin";
+
+// Helper to map DB row to frontend format
+function mapEvent(e) {
+  return {
+    slug: e.slug,
+    title: e.title,
+    date: e.date,
+    desc: e.description,
+    type: e.type,
+    color: e.color,
+    location: e.location,
+    capacity: e.capacity,
+    status: e.status,
+    featured: e.featured,
+    prerequisites: e.prerequisites || [],
+    schedule: e.schedule || [],
+    speakers: e.speakers || [],
+    formFields: e.form_fields || [],
+    images: e.images || [],
+    videos: e.videos || [],
+  };
+}
 
 export async function GET(request, { params }) {
   const { slug } = await params;
-  const events = readData("events");
-  const event = events.find((e) => e.slug === slug);
-  if (!event) {
+
+  const { data, error } = await supabaseAdmin
+    .from("events")
+    .select("*")
+    .eq("slug", slug)
+    .single();
+
+  if (error || !data) {
     return NextResponse.json({ error: "Event not found" }, { status: 404 });
   }
-  return NextResponse.json(event);
+
+  return NextResponse.json(mapEvent(data));
 }
 
 export async function PUT(request, { params }) {
@@ -21,18 +49,38 @@ export async function PUT(request, { params }) {
   try {
     const { slug } = await params;
     const updates = await request.json();
-    const events = readData("events");
-    const index = events.findIndex((e) => e.slug === slug);
 
-    if (index === -1) {
+    const row = {};
+    if (updates.title !== undefined) row.title = updates.title;
+    if (updates.date !== undefined) row.date = updates.date;
+    if (updates.desc !== undefined) row.description = updates.desc;
+    if (updates.type !== undefined) row.type = updates.type;
+    if (updates.color !== undefined) row.color = updates.color;
+    if (updates.location !== undefined) row.location = updates.location;
+    if (updates.capacity !== undefined) row.capacity = updates.capacity;
+    if (updates.status !== undefined) row.status = updates.status;
+    if (updates.featured !== undefined) row.featured = updates.featured;
+    if (updates.prerequisites !== undefined) row.prerequisites = updates.prerequisites;
+    if (updates.schedule !== undefined) row.schedule = updates.schedule;
+    if (updates.speakers !== undefined) row.speakers = updates.speakers;
+    if (updates.formFields !== undefined) row.form_fields = updates.formFields;
+    if (updates.images !== undefined) row.images = updates.images;
+    if (updates.videos !== undefined) row.videos = updates.videos;
+
+    const { data, error } = await supabaseAdmin
+      .from("events")
+      .update(row)
+      .eq("slug", slug)
+      .select()
+      .single();
+
+    if (error || !data) {
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
 
-    events[index] = { ...events[index], ...updates };
-    writeData("events", events);
-
-    return NextResponse.json(events[index]);
+    return NextResponse.json(mapEvent(data));
   } catch (err) {
+    console.error("Error updating event:", err);
     return NextResponse.json({ error: "Failed to update event" }, { status: 500 });
   }
 }
@@ -45,14 +93,16 @@ export async function DELETE(request, { params }) {
 
   try {
     const { slug } = await params;
-    const events = readData("events");
-    const filtered = events.filter((e) => e.slug !== slug);
 
-    if (filtered.length === events.length) {
-      return NextResponse.json({ error: "Event not found" }, { status: 404 });
+    const { error } = await supabaseAdmin
+      .from("events")
+      .delete()
+      .eq("slug", slug);
+
+    if (error) {
+      return NextResponse.json({ error: "Failed to delete event" }, { status: 500 });
     }
 
-    writeData("events", filtered);
     return NextResponse.json({ success: true });
   } catch (err) {
     return NextResponse.json({ error: "Failed to delete event" }, { status: 500 });

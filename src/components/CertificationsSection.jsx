@@ -4,10 +4,23 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import useRealtimeTable from "@/hooks/useRealtimeTable";
 
 gsap.registerPlugin(ScrollTrigger);
 
-
+const transformCert = (row) => ({
+  id: row.id,
+  name: row.name,
+  code: row.code,
+  level: row.level,
+  color: row.color,
+  description: row.description,
+  duration: row.duration,
+  questions: row.questions,
+  passingScore: row.passing_score,
+  topics: row.topics || [],
+  image: row.image || "",
+});
 
 function CertBadge({ cert, index }) {
   return (
@@ -52,16 +65,9 @@ function CertBadge({ cert, index }) {
 export default function CertificationsSection() {
   const sectionRef = useRef(null);
   const titleRef = useRef(null);
-  const [certs, setCerts] = useState([]);
-
-  useEffect(() => {
-    fetch("/api/certifications")
-      .then((res) => res.json())
-      .then((data) => {
-        if (Array.isArray(data) && data.length > 0) setCerts(data);
-      })
-      .catch(() => {});
-  }, []);
+  const { data: certs } = useRealtimeTable("certifications", "/api/certifications", {
+    transform: transformCert,
+  });
 
   useEffect(() => {
     const ctx = gsap.context(() => {

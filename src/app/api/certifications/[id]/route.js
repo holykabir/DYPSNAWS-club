@@ -1,15 +1,33 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
-import { readData, writeData } from "@/lib/dataStore";
+import supabaseAdmin from "@/lib/supabaseAdmin";
 
 export async function GET(request, { params }) {
   const { id } = await params;
-  const certs = readData("certifications");
-  const cert = certs.find((c) => c.id === id);
-  if (!cert) {
+
+  const { data, error } = await supabaseAdmin
+    .from("certifications")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (error || !data) {
     return NextResponse.json({ error: "Certification not found" }, { status: 404 });
   }
-  return NextResponse.json(cert);
+
+  return NextResponse.json({
+    id: data.id,
+    name: data.name,
+    code: data.code,
+    level: data.level,
+    color: data.color,
+    description: data.description,
+    duration: data.duration,
+    questions: data.questions,
+    passingScore: data.passing_score,
+    topics: data.topics || [],
+    image: data.image || "",
+  });
 }
 
 export async function PUT(request, { params }) {
@@ -21,18 +39,45 @@ export async function PUT(request, { params }) {
   try {
     const { id } = await params;
     const updates = await request.json();
-    const certs = readData("certifications");
-    const index = certs.findIndex((c) => c.id === id);
 
-    if (index === -1) {
+    const row = {};
+    if (updates.name !== undefined) row.name = updates.name;
+    if (updates.code !== undefined) row.code = updates.code;
+    if (updates.level !== undefined) row.level = updates.level;
+    if (updates.color !== undefined) row.color = updates.color;
+    if (updates.description !== undefined) row.description = updates.description;
+    if (updates.duration !== undefined) row.duration = updates.duration;
+    if (updates.questions !== undefined) row.questions = updates.questions;
+    if (updates.passingScore !== undefined) row.passing_score = updates.passingScore;
+    if (updates.topics !== undefined) row.topics = updates.topics;
+    if (updates.image !== undefined) row.image = updates.image;
+
+    const { data, error } = await supabaseAdmin
+      .from("certifications")
+      .update(row)
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error || !data) {
       return NextResponse.json({ error: "Certification not found" }, { status: 404 });
     }
 
-    certs[index] = { ...certs[index], ...updates };
-    writeData("certifications", certs);
-
-    return NextResponse.json(certs[index]);
+    return NextResponse.json({
+      id: data.id,
+      name: data.name,
+      code: data.code,
+      level: data.level,
+      color: data.color,
+      description: data.description,
+      duration: data.duration,
+      questions: data.questions,
+      passingScore: data.passing_score,
+      topics: data.topics || [],
+      image: data.image || "",
+    });
   } catch (err) {
+    console.error("Error updating certification:", err);
     return NextResponse.json({ error: "Failed to update certification" }, { status: 500 });
   }
 }
@@ -45,14 +90,16 @@ export async function DELETE(request, { params }) {
 
   try {
     const { id } = await params;
-    const certs = readData("certifications");
-    const filtered = certs.filter((c) => c.id !== id);
 
-    if (filtered.length === certs.length) {
-      return NextResponse.json({ error: "Certification not found" }, { status: 404 });
+    const { error } = await supabaseAdmin
+      .from("certifications")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      return NextResponse.json({ error: "Failed to delete certification" }, { status: 500 });
     }
 
-    writeData("certifications", filtered);
     return NextResponse.json({ success: true });
   } catch (err) {
     return NextResponse.json({ error: "Failed to delete certification" }, { status: 500 });
